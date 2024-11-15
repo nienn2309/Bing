@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
+import { StyleSheet, View, Alert, Platform, PermissionsAndroid } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
 import axios from 'axios';
 
 interface POI {
@@ -21,11 +22,76 @@ interface POI {
 const MapScreen = () => {
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
-  
-  const CURRENT_LOCATION = {
-    latitude: 21.043941,
-    longitude: 105.917325,
+  const [location, setLocation] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.002,
+    longitudeDelta: 0.002,
+  });
+
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'ios') {
+      Geolocation.requestAuthorization();
+      getLocation();
+    } else {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'This app needs access to your location.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          getLocation();
+        } else {
+          console.log('Location permission denied');
+        }
+      } catch {
+        console.log('Location permission denied');
+      }
+    }
   };
+
+  const getLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        setLocation(prevLocation => ({
+          ...prevLocation,
+          latitude,
+          longitude,
+        }));
+      },
+      () => console.log('Location permission denied'),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+    );
+  };
+
+  useEffect(() => {
+    requestLocationPermission();
+    const watchId = Geolocation.watchPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        console.log(`Updated location: Latitude: ${latitude}, Longitude: ${longitude}`);
+        
+        setLocation(prevLocation => ({
+          ...prevLocation,
+          latitude,
+          longitude,
+        }));
+      },
+      () => console.log('Location permission denied'),
+      { enableHighAccuracy: true, distanceFilter: 10 },
+    );
+
+    return () => {
+      Geolocation.clearWatch(watchId);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchPOIs = async () => {
@@ -63,8 +129,8 @@ const MapScreen = () => {
       const response = await axios.post(
         'https://ap.cs.ucy.ac.cy:44/api/navigation/route/coordinates',
         {
-          coordinates_lon: CURRENT_LOCATION.longitude.toString(),
-          coordinates_lat: CURRENT_LOCATION.latitude.toString(),
+          coordinates_lon: location.longitude.toString(),
+          coordinates_lat: location.latitude.toString(),
           floor_number: poi.floor_number,
           pois_to: poi.puid,
         },
@@ -82,7 +148,7 @@ const MapScreen = () => {
         }));
 
         const fullRoute = [
-          CURRENT_LOCATION,
+          location,
           ...routeCoords,
         ];
 
@@ -101,19 +167,14 @@ const MapScreen = () => {
     <View style={styles.container}>
       <MapView
         style={styles.map}
+        showsUserLocation={true}
         initialRegion={{
-          latitude: CURRENT_LOCATION.latitude,
-          longitude: CURRENT_LOCATION.longitude,
+          latitude: location.latitude,
+          longitude: location.longitude,
           latitudeDelta: 0.002,
           longitudeDelta: 0.002,
         }}
       >
-
-        <Marker
-          coordinate={CURRENT_LOCATION}
-          pinColor="blue"
-          title="Current Location"
-        />
 
         {pois.map((poi, index) => (
           <Marker
