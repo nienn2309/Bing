@@ -1,4 +1,3 @@
-// screens/MapScreen.tsx
 import React, {useEffect, useState} from 'react';
 import {View} from 'react-native';
 import MapView, {Marker, Polyline} from 'react-native-maps';
@@ -6,12 +5,11 @@ import {POI, RouteCoordinate} from '../Type';
 import {styles} from '../styles';
 import {useLocation} from '../hooks/useLocation';
 import {fetchPOIs, getFastestRoute} from '../services/api';
+import {FloorplanOverlay} from './FloorplanOverlay';
 
 const MapScreen = () => {
   const [pois, setPois] = useState<POI[]>([]);
-  const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>(
-    [],
-  );
+  const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
   const location = useLocation();
 
   useEffect(() => {
@@ -38,6 +36,7 @@ const MapScreen = () => {
           latitudeDelta: 0.002,
           longitudeDelta: 0.002,
         }}>
+        
         {pois
           .filter(poi => poi.description !== 'Connector')
           .map((poi, index) => (
@@ -51,7 +50,7 @@ const MapScreen = () => {
               title={poi.name}
             />
           ))}
-
+        
         {routeCoordinates.length > 0 && (
           <Polyline
             coordinates={routeCoordinates}
@@ -60,6 +59,16 @@ const MapScreen = () => {
             lineDashPattern={[1]}
           />
         )}
+
+        {/* Floorplan Overlay */}
+        <FloorplanOverlay 
+          currentRegion={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.002,
+            longitudeDelta: 0.002,
+          }} 
+        />
       </MapView>
     </View>
   );
