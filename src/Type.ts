@@ -18,6 +18,7 @@ export interface POI {
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
+    heading: number;
   }
   
   export interface RouteCoordinate {
