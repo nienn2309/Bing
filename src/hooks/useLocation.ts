@@ -79,6 +79,7 @@ export const useLocation = () => {
 
     // Start compass updates
     CompassHeading.start(degree_update_rate, ({ heading }: { heading: number }) => {
+      console.log(`User's heading degree: ${heading}`);
       setLocation(prevLocation => ({
         ...prevLocation,
         heading,
