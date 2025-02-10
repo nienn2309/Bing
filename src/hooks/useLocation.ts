@@ -75,7 +75,7 @@ export const useLocation = () => {
     );
 
     // Set up compass heading updates: Update every 3 degrees of rotation 
-    const degree_update_rate = 5;
+    const degree_update_rate = 3;
 
     // Start compass updates
     CompassHeading.start(degree_update_rate, ({ heading }: { heading: number }) => {

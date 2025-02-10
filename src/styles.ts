@@ -21,7 +21,7 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  userMarker: {
+  userHeadingMarker: {
     width: 0,
     height: 0,
     backgroundColor: 'transparent',

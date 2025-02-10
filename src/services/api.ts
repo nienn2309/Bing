@@ -1,4 +1,3 @@
-// services/api.ts
 import axios from 'axios';
 import { POI, LocationState, RouteCoordinate } from '../Type';
 import { Alert } from 'react-native';
@@ -15,13 +14,14 @@ export const fetchPOIs = async (): Promise<POI[]> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          buid: 'building_678938f8-3452-4e9e-95e7-7f356ee8931c_1731591381115',
+          buid: 'building_7bf70569-257e-412d-a4be-9d1d85296a14_1731512504566',
           floor_number: '0',
         }),
       },
     );
     const data = await response.json();
     if (data.pois && Array.isArray(data.pois)) {
+      console.log('POIs API response:', data);
       return data.pois;
     }
     throw new Error('Invalid POIs data format');
@@ -37,8 +37,9 @@ export const getFastestRoute = async (
   poi: POI
 ): Promise<RouteCoordinate[]> => {
   try {
+    // Append a timestamp to avoid potential caching issues
     const response = await axios.post(
-      `${API_BASE_URL}/navigation/route/coordinates`,
+      `${API_BASE_URL}/navigation/route/coordinates?nocache=${Date.now()}`,
       {
         coordinates_lon: location.longitude.toString(),
         coordinates_lat: location.latitude.toString(),
@@ -51,13 +52,16 @@ export const getFastestRoute = async (
         },
       },
     );
-
+    
+    console.log('Route API raw response:', response.data);
+    
     if (response.data && response.data.pois) {
       const routeCoords = response.data.pois.map((point: any) => ({
         latitude: parseFloat(point.lat),
         longitude: parseFloat(point.lon),
       }));
 
+      // Prepend the current location to the route if needed
       return [
         location,
         ...routeCoords,

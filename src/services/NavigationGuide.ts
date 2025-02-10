@@ -1,10 +1,13 @@
 import { LocationState, RouteCoordinate } from '../Type';
 
 export interface NavigationInstruction {
-  type: 'STRAIGHT' | 'TURN_LEFT' | 'TURN_RIGHT' | 'DESTINATION' | 'START';
+  type: 'STRAIGHT' | 'TURN_LEFT' | 'TURN_RIGHT' | 'DESTINATION' | 'START' | 'WAYPOINT';
   distance: number;
   message: string;
   requiredBearing?: number;
+  isLastWaypoint?: boolean;
+  waypointNumber?: number;
+  totalWaypoints?: number;
 }
 
 interface NavigationParams {
@@ -16,6 +19,7 @@ interface NavigationParams {
 interface DistanceParams {
   location: LocationState;
   destination: RouteCoordinate;
+  waypointNumber?: number;
 }
 
 interface ProgressParams {
@@ -29,59 +33,6 @@ export class NavigationGuide {
   private static readonly ARRIVAL_THRESHOLD = 10;
   private static readonly HEADING_TOLERANCE = 20;
 
-  // This method calculates the bearing (direction) between two geographical points
-  private static calculateBearing(start: LocationState | RouteCoordinate, end: RouteCoordinate): number {
-    const startLat = this.toRadians(start.latitude); // Convert start latitude to radians
-    const startLng = this.toRadians(start.longitude); // Convert start longitude to radians
-    const endLat = this.toRadians(end.latitude); // Convert end latitude to radians
-    const endLng = this.toRadians(end.longitude); // Convert end longitude to radians
-
-    // Calculate the differences in coordinates
-    const y = Math.sin(endLng - startLng) * Math.cos(endLat);
-    const x = Math.cos(startLat) * Math.sin(endLat) -
-              Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
-    
-    // Calculate the bearing using the arctangent of y and x
-    let bearing = Math.atan2(y, x);
-    bearing = this.toDegrees(bearing); // Convert the bearing from radians to degrees
-    return (bearing + 360) % 360; // Normalize the bearing to a value between 0 and 360 degrees
-  }
-
-  // This method calculates the relative turn direction based on the current heading and target heading
-  public static getRelativeTurnDirection(currentHeading: number, targetHeading: number): string {
-    // Calculate the difference between the target heading and the current heading
-    let diff = (targetHeading - currentHeading + 360) % 360;
-    if (diff > 180) diff -= 360; // Normalize the difference to the range -180 to 180
-
-    const absChange = Math.abs(diff); // Get the absolute value of the difference
-    if (absChange <= 20) {
-      return "straight ahead"; // If the change is small, continue straight ahead
-    } else if (absChange <= 45) {
-      return diff > 0 ? "slightly right" : "slightly left"; // If the change is moderate, turn slightly
-    } else if (absChange <= 90) {
-      return diff > 0 ? "right" : "left"; // If the change is significant, turn right or left
-    } else {
-      return diff > 0 ? "sharp right" : "sharp left"; // If the change is large, make a sharp turn
-    }
-  }
-
-  // This method calculates the distance between two geographical points using the Haversine formula
-  public static calculateDistance({ location, destination }: DistanceParams): number {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = this.toRadians(location.latitude); // Convert latitude of the location to radians
-    const φ2 = this.toRadians(destination.latitude); // Convert latitude of the destination to radians
-    const Δφ = this.toRadians(destination.latitude - location.latitude); // Calculate the difference in latitude
-    const Δλ = this.toRadians(destination.longitude - location.longitude); // Calculate the difference in longitude
-
-    // Apply the Haversine formula
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c; // Return the distance in meters
-  }
-
   // Converts degrees to radians
   private static toRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
@@ -90,6 +41,49 @@ export class NavigationGuide {
   // Converts radians to degrees
   private static toDegrees(radians: number): number {
     return radians * (180 / Math.PI);
+  }
+
+  // Calculates bearing between two points
+  private static calculateBearing(start: LocationState | RouteCoordinate, end: RouteCoordinate): number {
+    const startLat = this.toRadians(start.latitude);
+    const startLng = this.toRadians(start.longitude);
+    const endLat = this.toRadians(end.latitude);
+    const endLng = this.toRadians(end.longitude);
+
+    const y = Math.sin(endLng - startLng) * Math.cos(endLat);
+    const x = Math.cos(startLat) * Math.sin(endLat) -
+              Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
+    
+    let bearing = Math.atan2(y, x);
+    bearing = this.toDegrees(bearing);
+
+    const normalized = (bearing + 360) % 360;
+
+    console.log(`Calculated bearing from [${start.latitude}, ${start.longitude}] to [${end.latitude}, ${end.longitude}] is ${normalized}`);
+    return normalized;
+  }
+
+  public static calculateDistance({ location, destination, waypointNumber }: DistanceParams): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = this.toRadians(location.latitude);
+    const φ2 = this.toRadians(destination.latitude);
+    const Δφ = this.toRadians(destination.latitude - location.latitude);
+    const Δλ = this.toRadians(destination.longitude - location.longitude);
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+
+    // Log the waypoint number if provided
+  if (waypointNumber !== undefined) {
+    console.log(`Calculated distance to waypoint ${waypointNumber}: ${distance} meters`);
+  } else {
+    console.log(`Calculated distance: ${distance} meters`);
+  }
+
+  return distance;
   }
 
   private static getHeadingDifference(userHeading: number, requiredBearing: number): number {
@@ -105,20 +99,32 @@ export class NavigationGuide {
     return headingDiff > 0 ? "right" : "left";
   }
   
-  // This method calculates the next navigation instruction based on the current location and route
   public static getNextInstruction({ location, route, currentSegment }: NavigationParams): NavigationInstruction {
+    console.log(`Getting next instruction at segment ${currentSegment} for route length ${route.length}`);
+    
     if (route.length < 2 || currentSegment >= route.length - 1) {
+      console.log('Route is empty or user has reached destination');
       return {
         type: 'DESTINATION',
         distance: 0,
-        message: 'You have reached your destination'
+        message: 'You have reached your final destination',
+        isLastWaypoint: false,
+        waypointNumber: currentSegment + 1,
+        totalWaypoints: route.length
       };
     }
 
     const nextPoint = route[currentSegment + 1];
-    const distanceToNext = this.calculateDistance({ location, destination: nextPoint });
+    const distanceToNext = this.calculateDistance({ 
+      location, 
+      destination: nextPoint, 
+      waypointNumber: currentSegment + 1 
+    });
     const requiredBearing = this.calculateBearing(location, nextPoint);
     const headingDiff = this.getHeadingDifference(location.heading, requiredBearing);
+    const isLastWaypoint = currentSegment === route.length - 2;
+
+    console.log(`Next waypoint: [${nextPoint.latitude}, ${nextPoint.longitude}], Distance to next: ${distanceToNext}, Required bearing: ${requiredBearing}, Heading difference: ${headingDiff}`);
 
     if (distanceToNext < this.ARRIVAL_THRESHOLD) {
       return this.getNextTurn({ location, route, currentSegment: currentSegment + 1 });
@@ -126,40 +132,62 @@ export class NavigationGuide {
 
     if (currentSegment === 0) {
       const turnDirection = this.getTurnDirection(headingDiff);
+      console.log(`Starting navigation, turn ${turnDirection} and proceed for ${distanceToNext} meters`);
       return {
         type: 'START',
         distance: distanceToNext,
-        message: `Turn ${turnDirection} and proceed for ${Math.round(distanceToNext)} meters`,
-        requiredBearing
+        message: `Turn ${turnDirection} and proceed for ${Math.round(distanceToNext)} meters to reach waypoint 1 of ${route.length - 1}`,
+        requiredBearing,
+        isLastWaypoint: false,
+        waypointNumber: currentSegment + 1,
+        totalWaypoints: route.length - 1
       };
     }
 
     if (distanceToNext < this.TURN_THRESHOLD) {
+      console.log('Reached turn threshold, getting next turn');
       return this.getNextTurn({ location, route, currentSegment });
     }
 
     const turnDirection = this.getTurnDirection(headingDiff);
+    console.log(`Instruction based on headingDiff: ${headingDiff} (${turnDirection})`);
+    
+    const waypointInfo = isLastWaypoint ? 
+      'last waypoint before final destination' : 
+      `waypoint ${currentSegment + 1} of ${route.length - 1}`;
+
     if (turnDirection !== "straight ahead") {
       return {
         type: Math.abs(headingDiff) > 90 ? 'TURN_RIGHT' : 'STRAIGHT',
         distance: distanceToNext,
-        message: `Adjust your direction ${turnDirection} and continue for ${Math.round(distanceToNext)} meters`,
-        requiredBearing
+        message: `Adjust your direction ${turnDirection} and continue for ${Math.round(distanceToNext)} meters to reach ${waypointInfo}`,
+        requiredBearing,
+        isLastWaypoint,
+        waypointNumber: currentSegment + 1,
+        totalWaypoints: route.length - 1
       };
     }
 
     return {
       type: 'STRAIGHT',
       distance: distanceToNext,
-      message: `Continue straight for ${Math.round(distanceToNext)} meters`,
-      requiredBearing
+      message: `Continue straight for ${Math.round(distanceToNext)} meters to reach ${waypointInfo}`,
+      requiredBearing,
+      isLastWaypoint,
+      waypointNumber: currentSegment + 1,
+      totalWaypoints: route.length - 1
     };
   }
 
   private static getNextTurn({ location, route, currentSegment }: NavigationParams): NavigationInstruction {
+    console.log(`Getting next turn from segment ${currentSegment}`);
     if (currentSegment >= route.length - 2) {
       const finalPoint = route[route.length - 1];
-      const distanceToEnd = this.calculateDistance({ location, destination: finalPoint });
+      const distanceToEnd = this.calculateDistance({ 
+        location, 
+        destination: finalPoint, 
+        waypointNumber: route.length 
+      });
       const finalBearing = this.calculateBearing(location, finalPoint);
       const headingDiff = this.getHeadingDifference(location.heading, finalBearing);
       const turnDirection = this.getTurnDirection(headingDiff);
@@ -168,9 +196,12 @@ export class NavigationGuide {
         type: 'DESTINATION',
         distance: distanceToEnd,
         message: turnDirection === "straight ahead" 
-          ? 'Your destination is straight ahead'
-          : `Turn ${turnDirection} to reach your destination`,
-        requiredBearing: finalBearing
+          ? 'Your final destination is straight ahead'
+          : `Turn ${turnDirection} to reach your final destination`,
+        requiredBearing: finalBearing,
+        isLastWaypoint: false,
+        waypointNumber: route.length,
+        totalWaypoints: route.length
       };
     }
 
@@ -178,22 +209,37 @@ export class NavigationGuide {
     const nextBearing = this.calculateBearing(location, nextPoint);
     const headingDiff = this.getHeadingDifference(location.heading, nextBearing);
     const turnDirection = this.getTurnDirection(headingDiff);
-    const distance = this.calculateDistance({ location, destination: nextPoint });
+    const distance = this.calculateDistance({ 
+      location, 
+      destination: nextPoint, 
+      waypointNumber: currentSegment + 1 
+    });
+    const isLastWaypoint = currentSegment === route.length - 2;
+
+    const waypointInfo = isLastWaypoint ? 
+      'final waypoint' : 
+      `waypoint ${currentSegment + 1} of ${route.length - 1}`;
 
     if (Math.abs(headingDiff) > this.DIRECTION_THRESHOLD) {
       return {
         type: headingDiff > 0 ? 'TURN_RIGHT' : 'TURN_LEFT',
         distance,
-        message: `Turn ${turnDirection} in ${Math.round(distance)} meters`,
-        requiredBearing: nextBearing
+        message: `Turn ${turnDirection} in ${Math.round(distance)} meters to reach ${waypointInfo}`,
+        requiredBearing: nextBearing,
+        isLastWaypoint,
+        waypointNumber: currentSegment + 1,
+        totalWaypoints: route.length - 1
       };
     }
 
     return {
-      type: 'STRAIGHT',
+      type: 'WAYPOINT',
       distance,
-      message: `Continue straight for ${Math.round(distance)} meters`,
-      requiredBearing: nextBearing
+      message: `Continue straight for ${Math.round(distance)} meters to reach ${waypointInfo}`,
+      requiredBearing: nextBearing,
+      isLastWaypoint,
+      waypointNumber: currentSegment + 1,
+      totalWaypoints: route.length - 1
     };
   }
 
@@ -202,13 +248,19 @@ export class NavigationGuide {
     let closestIndex = 0;
 
     route.forEach((point, index) => {
-      const distance = this.calculateDistance({ location, destination: point });
-      if (distance < minDistance) {
-        minDistance = distance;
+      const d = this.calculateDistance({ location, destination: point });
+      if (d < minDistance) {
+        minDistance = d;
         closestIndex = index;
       }
     });
-
+    
+    const isLastWaypoint = closestIndex === route.length - 2;
+    const progressMessage = isLastWaypoint ? 
+      'User is at the last waypoint before final destination' : 
+      `User is at waypoint ${closestIndex + 1} of ${route.length - 1}`;
+    
+    console.log(`User progress: ${progressMessage} at a distance of ${minDistance} meters`);
     return closestIndex;
   }
 }

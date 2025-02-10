@@ -42,9 +42,9 @@ interface FloorplanOverlayProps {
 
 export const FloorplanOverlay: React.FC<FloorplanOverlayProps> = ({ currentRegion }) => {
   useEffect(() => {
-    console.log('Current Region:', currentRegion);
-    console.log('Floorplan Bounds:', FLOORPLAN_BOUNDS);
-    console.log('Floorplan Rotation:', FLOORPLAN_ROTATION);
+    //console.log('Current Region:', currentRegion);
+    //console.log('Floorplan Bounds:', FLOORPLAN_BOUNDS);
+    //console.log('Floorplan Rotation:', FLOORPLAN_ROTATION);
   }, [currentRegion]);
 
   return (
