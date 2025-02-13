@@ -8,6 +8,8 @@ export interface NavigationInstruction {
   isLastWaypoint?: boolean;
   waypointNumber?: number;
   totalWaypoints?: number;
+  clockDirection?: string;
+  stepsRemaining?: number;
 }
 
 interface NavigationParams {
@@ -32,6 +34,8 @@ export class NavigationGuide {
   private static readonly TURN_THRESHOLD = 15;
   private static readonly ARRIVAL_THRESHOLD = 10;
   private static readonly HEADING_TOLERANCE = 20;
+  private static readonly COUNTDOWN_THRESHOLD = 20;
+  private static readonly AVERAGE_STRIDE_LENGTH = 0.7; // Average stride length in meters
 
   // Converts degrees to radians
   private static toRadians(degrees: number): number {
@@ -77,13 +81,13 @@ export class NavigationGuide {
     const distance = R * c;
 
     // Log the waypoint number if provided
-  if (waypointNumber !== undefined) {
-    console.log(`Calculated distance to waypoint ${waypointNumber}: ${distance} meters`);
-  } else {
-    console.log(`Calculated distance: ${distance} meters`);
-  }
+    if (waypointNumber !== undefined) {
+      console.log(`Calculated distance to waypoint ${waypointNumber}: ${distance} meters`);
+    } else {
+      console.log(`Calculated distance: ${distance} meters`);
+    }
 
-  return distance;
+    return distance;
   }
 
   private static getHeadingDifference(userHeading: number, requiredBearing: number): number {
@@ -98,7 +102,11 @@ export class NavigationGuide {
     }
     return headingDiff > 0 ? "right" : "left";
   }
-  
+
+  private static getStepsFromDistance(distance: number): number {
+    return Math.round(distance / this.AVERAGE_STRIDE_LENGTH);
+  }
+
   public static getNextInstruction({ location, route, currentSegment }: NavigationParams): NavigationInstruction {
     console.log(`Getting next instruction at segment ${currentSegment} for route length ${route.length}`);
     
@@ -123,6 +131,8 @@ export class NavigationGuide {
     const requiredBearing = this.calculateBearing(location, nextPoint);
     const headingDiff = this.getHeadingDifference(location.heading, requiredBearing);
     const isLastWaypoint = currentSegment === route.length - 2;
+    const clockDirection = this.getClockDirection(requiredBearing);
+    const stepsToNext = this.getStepsFromDistance(distanceToNext);
 
     console.log(`Next waypoint: [${nextPoint.latitude}, ${nextPoint.longitude}], Distance to next: ${distanceToNext}, Required bearing: ${requiredBearing}, Heading difference: ${headingDiff}`);
 
@@ -136,7 +146,7 @@ export class NavigationGuide {
       return {
         type: 'START',
         distance: distanceToNext,
-        message: `Turn ${turnDirection} and proceed for ${Math.round(distanceToNext)} meters to reach waypoint 1 of ${route.length - 1}`,
+        message: `Turn ${turnDirection} and proceed for ${stepsToNext} steps to reach waypoint 1 of ${route.length - 1}`,
         requiredBearing,
         isLastWaypoint: false,
         waypointNumber: currentSegment + 1,
@@ -160,7 +170,7 @@ export class NavigationGuide {
       return {
         type: Math.abs(headingDiff) > 90 ? 'TURN_RIGHT' : 'STRAIGHT',
         distance: distanceToNext,
-        message: `Adjust your direction ${turnDirection} and continue for ${Math.round(distanceToNext)} meters to reach ${waypointInfo}`,
+        message: `Adjust your direction ${turnDirection} and continue for ${stepsToNext} steps to reach ${waypointInfo}`,
         requiredBearing,
         isLastWaypoint,
         waypointNumber: currentSegment + 1,
@@ -171,7 +181,7 @@ export class NavigationGuide {
     return {
       type: 'STRAIGHT',
       distance: distanceToNext,
-      message: `Continue straight for ${Math.round(distanceToNext)} meters to reach ${waypointInfo}`,
+      message: `Continue straight for ${stepsToNext} steps to reach ${waypointInfo}`,
       requiredBearing,
       isLastWaypoint,
       waypointNumber: currentSegment + 1,
@@ -191,13 +201,14 @@ export class NavigationGuide {
       const finalBearing = this.calculateBearing(location, finalPoint);
       const headingDiff = this.getHeadingDifference(location.heading, finalBearing);
       const turnDirection = this.getTurnDirection(headingDiff);
+      const stepsToEnd = this.getStepsFromDistance(distanceToEnd);
       
       return {
         type: 'DESTINATION',
         distance: distanceToEnd,
         message: turnDirection === "straight ahead" 
-          ? 'Your final destination is straight ahead'
-          : `Turn ${turnDirection} to reach your final destination`,
+          ? `Your final destination is straight ahead, approximately ${stepsToEnd} steps`
+          : `Turn ${turnDirection} to reach your final destination in approximately ${stepsToEnd} steps`,
         requiredBearing: finalBearing,
         isLastWaypoint: false,
         waypointNumber: route.length,
@@ -215,6 +226,7 @@ export class NavigationGuide {
       waypointNumber: currentSegment + 1 
     });
     const isLastWaypoint = currentSegment === route.length - 2;
+    const stepsToNext = this.getStepsFromDistance(distance);
 
     const waypointInfo = isLastWaypoint ? 
       'final waypoint' : 
@@ -224,7 +236,7 @@ export class NavigationGuide {
       return {
         type: headingDiff > 0 ? 'TURN_RIGHT' : 'TURN_LEFT',
         distance,
-        message: `Turn ${turnDirection} in ${Math.round(distance)} meters to reach ${waypointInfo}`,
+        message: `Turn ${turnDirection} in approximately ${stepsToNext} steps to reach ${waypointInfo}`,
         requiredBearing: nextBearing,
         isLastWaypoint,
         waypointNumber: currentSegment + 1,
@@ -235,12 +247,41 @@ export class NavigationGuide {
     return {
       type: 'WAYPOINT',
       distance,
-      message: `Continue straight for ${Math.round(distance)} meters to reach ${waypointInfo}`,
+      message: `Continue straight for approximately ${stepsToNext} steps to reach ${waypointInfo}`,
       requiredBearing: nextBearing,
       isLastWaypoint,
       waypointNumber: currentSegment + 1,
       totalWaypoints: route.length - 1
     };
+  }
+
+  // Convert bearing to clock position (1-12)
+  private static getClockDirection(bearing: number): string {
+    const clockPosition = Math.round(bearing / 30);
+    return `${clockPosition === 0 ? 12 : clockPosition} o'clock`;
+  }
+
+  // Enhanced step calculation with stride length guidance
+  private static getStepInstruction(meters: number): string {
+    const steps = this.getStepsFromDistance(meters);
+    return `approximately ${steps} steps ahead`;
+  }
+
+  // Get countdown message based on remaining distance
+  private static getCountdownMessage(meters: number): string {
+    const steps = this.getStepsFromDistance(meters);
+    
+    if (meters <= 2) {
+      return "Stop now. You have reached your destination.";
+    } else if (meters <= 5) {
+      return `Keep walking slowly, your destination is ${steps} steps ahead`;
+    } else if (meters <= 10) {
+      return `Getting very close, about ${steps} steps remaining. Start walking more carefully`;
+    } else if (meters <= 15) {
+      return `Approaching destination, about ${steps} steps ahead. Prepare to slow down`;
+    }
+    
+    return `Continue walking, about ${steps} steps remaining to destination`;
   }
 
   public static getUserProgress({ location, route }: ProgressParams): number {

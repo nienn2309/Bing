@@ -15,61 +15,50 @@ const MapScreen = () => {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [navigationInstruction, setNavigationInstruction] = useState<NavigationInstruction | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  
 
-  // Fetch POIs on mount
   useEffect(() => {
     const loadPOIs = async () => {
-      const poisData = await fetchPOIs();
-      console.log('Fetched POIs:', poisData);
+      const poisData = await fetchPOIs(); 
       setPois(poisData);
     };
     loadPOIs();
-  }, []);
-
-  // Calculate navigation instructions whenever the location or route changes
-  useEffect(() => {
-    if (routeCoordinates.length > 0) {
-      // Calculate current segment based on user progress along the route
+  
+    // Only proceed if both location and routeCoordinates are available
+    if (location && routeCoordinates.length > 0) {
+      // Update current segment based on user's location
       const newSegment = NavigationGuide.getUserProgress({
         location: location,
-        route: routeCoordinates,
+        route: routeCoordinates
       });
-      console.log('Calculated current segment:', newSegment);
       setCurrentSegment(newSegment);
   
-      // Get the next navigation instruction based on new segment
+      // Get next instruction using real-time location and heading
       const instruction = NavigationGuide.getNextInstruction({
         location: location,
         route: routeCoordinates,
-        currentSegment: newSegment,
+        currentSegment: newSegment
       });
-      console.log('Navigation instruction:', instruction);
       setNavigationInstruction(instruction);
       
-      // Calculate and set distance to next point if applicable
+      // Calculate and set distance to next point
       if (newSegment < routeCoordinates.length - 1) {
         const nextPoint = routeCoordinates[newSegment + 1];
         const distanceToNext = NavigationGuide.calculateDistance({
           location: location,
-          destination: nextPoint,
+          destination: nextPoint
         });
-        console.log('Distance to next point:', distanceToNext);
         setDistance(distanceToNext);
+      } else {
+        // Reset distance when route is completed
+        setDistance(null);
+        setNavigationInstruction(null);
       }
     }
-  }, [location, routeCoordinates]);
+  }, [location, routeCoordinates]); // Dependency on location ensures real-time updates // Dependency on location ensures real-time updates
 
-  // Reset navigation state when a new route is selected and fetch route
   const handleGetRoute = async (poi: POI) => {
-    console.log(`Fetching route for POI: ${poi.name} (puid: ${poi.puid})`);
-    // Reset the navigation state so stale values don't carry over.
-    setCurrentSegment(0);
-    setNavigationInstruction(null);
-    setDistance(null);
-    setRouteCoordinates([]); // Clear previous route coordinates
-
     const route = await getFastestRoute(location, poi);
-    console.log('New route coordinates:', route);
     setRouteCoordinates(route);
   };
 

@@ -11,14 +11,16 @@
   },
   "dependencies": {
     "@react-native-community/geolocation": "^3.4.0",
+    "@react-native-community/voice": "^1.1.9",
     "axios": "^1.7.7",
     "azure-maps-control": "^3.5.0",
     "lucide-react": "^0.471.0",
     "react": "18.3.1",
     "react-azure-maps": "^1.0.0",
-    "react-native": "0.76.1",
+    "react-native": "0.76.1",         
     "react-native-compass-heading": "^2.0.0",
-    "react-native-maps": "^1.20.0"
+    "react-native-maps": "^1.20.0",
+    "react-native-tts": "^4.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
