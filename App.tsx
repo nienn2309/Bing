@@ -5,9 +5,9 @@ import TextToSpeech from './src/services/TextToSpeech';
 import SpeechToText from './src/services/SpeechToText';
 
 const App = () => {
-  return <SpeechToText />;
+  // return <SpeechToText />;
   // return <TextToSpeech />;
-  // return <MapScreen />;
+  return <MapScreen />;
 };
 
 export default App; 

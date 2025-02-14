@@ -7,15 +7,24 @@ import {useLocation} from '../hooks/useLocation';
 import {fetchPOIs, getFastestRoute} from '../services/api';
 import {FloorplanOverlay} from './FloorplanOverlay';
 import {NavigationInstruction, NavigationGuide} from '../services/NavigationGuide';
+import TextToSpeechService from '../services/TextToSpeech';
 
 const MapScreen = () => {
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
-  const location = useLocation(); // Get real-time location and heading
+  const location = useLocation();
   const [currentSegment, setCurrentSegment] = useState(0);
   const [navigationInstruction, setNavigationInstruction] = useState<NavigationInstruction | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   
+  useEffect(() => {
+    const tts = TextToSpeechService.getInstance();
+    tts.initialize();
+
+    return () => {
+      tts.cleanup();
+    };
+  }, []);
 
   useEffect(() => {
     const loadPOIs = async () => {
@@ -24,16 +33,13 @@ const MapScreen = () => {
     };
     loadPOIs();
   
-    // Only proceed if both location and routeCoordinates are available
     if (location && routeCoordinates.length > 0) {
-      // Update current segment based on user's location
       const newSegment = NavigationGuide.getUserProgress({
         location: location,
         route: routeCoordinates
       });
       setCurrentSegment(newSegment);
   
-      // Get next instruction using real-time location and heading
       const instruction = NavigationGuide.getNextInstruction({
         location: location,
         route: routeCoordinates,
@@ -41,7 +47,10 @@ const MapScreen = () => {
       });
       setNavigationInstruction(instruction);
       
-      // Calculate and set distance to next point
+      if (instruction) {
+        TextToSpeechService.getInstance().speak(instruction.message);
+      }
+      
       if (newSegment < routeCoordinates.length - 1) {
         const nextPoint = routeCoordinates[newSegment + 1];
         const distanceToNext = NavigationGuide.calculateDistance({
@@ -50,16 +59,16 @@ const MapScreen = () => {
         });
         setDistance(distanceToNext);
       } else {
-        // Reset distance when route is completed
         setDistance(null);
         setNavigationInstruction(null);
       }
     }
-  }, [location, routeCoordinates]); // Dependency on location ensures real-time updates // Dependency on location ensures real-time updates
+  }, [location, routeCoordinates]);
 
   const handleGetRoute = async (poi: POI) => {
     const route = await getFastestRoute(location, poi);
     setRouteCoordinates(route);
+    TextToSpeechService.getInstance().speak("Route calculated. Starting navigation.", true);
   };
 
   const NavigationInstructions: React.FC<{
@@ -92,7 +101,6 @@ const MapScreen = () => {
           longitudeDelta: 0.002,
         }}>
         
-        {/* User location marker with real-time heading indicator */}
         <Marker
           coordinate={{
             latitude: location.latitude,
@@ -101,7 +109,9 @@ const MapScreen = () => {
           rotation={location.heading}
           anchor={{x: 0.5, y: 0.5}}
         >
-          <View style={styles.userHeadingMarker} /> {/* styles.ts */}
+          <View style={styles.userHeadingMarker}>
+            
+          </View>
         </Marker>
 
         {pois
@@ -114,8 +124,11 @@ const MapScreen = () => {
                 longitude: parseFloat(poi.coordinates_lon),
               }}
               onPress={() => handleGetRoute(poi)}
-              title={poi.name}
-            />
+            >
+              <View style={styles.markerContainer}>
+                <Text style={styles.markerText}>{poi.name}</Text>
+              </View>
+            </Marker>
           ))}
         
         {routeCoordinates.length > 0 && (
