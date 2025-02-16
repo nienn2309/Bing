@@ -84,7 +84,7 @@ export const useLocation = () => {
         ...prevLocation,
         heading,
       }));
-    });
+    }); 
 
     // Cleanup
     return () => {

@@ -8,6 +8,7 @@ import {fetchPOIs, getFastestRoute} from '../services/api';
 import {FloorplanOverlay} from './FloorplanOverlay';
 import {NavigationInstruction, NavigationGuide} from '../services/NavigationGuide';
 import TextToSpeechService from '../services/TextToSpeech';
+import Svg, {Path, Circle, Ellipse} from 'react-native-svg';
 
 const MapScreen = () => {
   const [pois, setPois] = useState<POI[]>([]);
@@ -16,6 +17,25 @@ const MapScreen = () => {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [navigationInstruction, setNavigationInstruction] = useState<NavigationInstruction | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  const icon = () => {
+    return(
+      <Svg 
+        height = {20}
+        width = {20}
+      >
+      <Ellipse
+        cx="10"
+        cy="10"
+        rx="10"
+        ry="10"
+        fill="blue"
+        stroke="#fff"
+        strokeWidth="2"
+      />
+      </Svg>
+
+      )
+  }
   
   useEffect(() => {
     const tts = TextToSpeechService.getInstance();

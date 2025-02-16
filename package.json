@@ -17,9 +17,11 @@
     "lucide-react": "^0.471.0",
     "react": "18.3.1",
     "react-azure-maps": "^1.0.0",
-    "react-native": "0.76.1",         
+    "react-native": "0.76.1",
     "react-native-compass-heading": "^2.0.0",
     "react-native-maps": "^1.20.0",
+    "react-native-sensors": "^7.3.6",
+    "react-native-svg": "^15.11.1",
     "react-native-tts": "^4.1.1"
   },
   "devDependencies": {
