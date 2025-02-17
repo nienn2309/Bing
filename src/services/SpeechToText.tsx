@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Button, Text, StyleSheet } from 'react-native';
-import Voice, { SpeechRecognizedEvent, SpeechResultsEvent, SpeechErrorEvent } from '@react-native-community/voice';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Voice from '@react-native-community/voice';
 
-const SpeechToText = () => {
-  const [isListening, setIsListening] = useState(false);
+const SpeechToText = forwardRef((_, ref) => {
   const [recognizedText, setRecognizedText] = useState('');
+  const [isListening, setIsListening] = useState(false);
 
   const startRecognition = async () => {
     try {
@@ -12,50 +12,50 @@ const SpeechToText = () => {
       await Voice.start('en-US');
       setIsListening(true);
       setRecognizedText('');
-      console.log('Voice recognition started');
     } catch (error) {
       console.error('Error starting voice recognition:', error);
     }
-  }
+  };
+
+  Voice.onSpeechResults = (event) => {
+    if (event.value) {
+      setRecognizedText(event.value[0]); // Set recognized text
+      stopRecognition(); // Stop listening after speech is detected
+    }
+  };
 
   const stopRecognition = async () => {
     try {
-      console.log('Stopping voice recognition...');
       await Voice.stop();
       setIsListening(false);
-      console.log('Voice recognition stopped');
     } catch (error) {
       console.error('Error stopping voice recognition:', error);
     }
   };
 
-  Voice.onSpeechResults = (event) => {
-    console.log('Speech results event:', event);
-    const { value } = event;
-    if (value) {
-      setRecognizedText(value[0]);
-      console.log('Recognized text:', value[0]);
-      stopRecognition();
-    }
-  };
-
-  Voice.onSpeechError = (event) => {
-    console.error('Speech error event:', event);
-  };
-
-  Voice.onSpeechRecognized = (event) => {
-    console.log('Speech recognized event:', event);
-  };
+  useImperativeHandle(ref, () => ({
+    startRecognition,
+    recognizedText, // Expose recognized text to HomeScreen
+  }));
 
   return (
-    <View style={{flex: 1, padding: 20}}>
-      <Button
-        title={isListening ? 'Stop listening' : 'Start listening'}
-        onPress={isListening ? stopRecognition : startRecognition}
-      />
-      <Text>Recognized text: {recognizedText}</Text>
+    <View style={styles.container}>
+      <Text style={styles.text}></Text>
     </View>
   );
-};
+});
 
 export default SpeechToText;
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  text: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+});

@@ -2,12 +2,12 @@ import React, { useEffect } from 'react';
 import MapView, { Overlay } from 'react-native-maps';
 
 // Image path
-const FloorplanImage = require('../images/floorplan.jpg');
+const FloorplanImage = require('../images/80-duytan.png');
 
 // Center coordinates of the building
 const FLOORPLAN_CENTER = {
-  latitude: 21.043872057346032,
-  longitude: 105.91723186401022,
+  latitude: 21.031447,
+  longitude: 105.782875,
 };
 
 // Deltas to determine the size of the overlay rectangle
@@ -17,7 +17,7 @@ const FLOORPLAN_DELTA = {
 };
 
 // Floorplan rotation in degrees clockwise
-const FLOORPLAN_ROTATION = -25; 
+const FLOORPLAN_ROTATION = -83; 
 
 // Calculate bounds dynamically based on the center and deltas
 const FLOORPLAN_BOUNDS = {

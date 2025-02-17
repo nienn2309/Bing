@@ -1,13 +1,18 @@
-// App.tsx
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import HomeScreen from './src/screens/Start';
 import MapScreen from './src/screens/MapScreen';
-import TextToSpeech from './src/services/TextToSpeech';
-import SpeechToText from './src/services/SpeechToText';
 
-const App = () => {
-  // return <SpeechToText />;
-  // return <TextToSpeech />;
-  return <MapScreen />;
-};
+const Stack = createStackNavigator();
 
-export default App; 
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="MapScreen" component={MapScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

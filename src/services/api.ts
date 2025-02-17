@@ -69,8 +69,6 @@ export const getFastestRoute = async (
     }
     throw new Error('Invalid route data format');
   } catch (error) {
-    console.error('Error getting route:', error);
-    Alert.alert('Error', 'Failed to calculate route');
     return [];
   }
 };
