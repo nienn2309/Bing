@@ -1,5 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  Animated, 
+  Easing 
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import SpeechToText from '../services/SpeechToText';
 import { fetchPOIs } from '../services/api';
 
@@ -8,6 +17,11 @@ function HomeScreen({ navigation }) {
   const [recognizedText, setRecognizedText] = useState('');
   const [matchedPOI, setMatchedPOI] = useState(null);
   const [pois, setPOIs] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loadPOIs = async () => {
@@ -25,11 +39,55 @@ function HomeScreen({ navigation }) {
     }
   }, [recognizedText]);
 
+  const startListeningAnimation = () => {
+    setIsListening(true);
+
+    // Scale effect when pressing
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Soundwave effect loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const stopListeningAnimation = () => {
+    setIsListening(false);
+    waveAnim.setValue(0);
+  };
+
   const handlePress = async () => {
+    startListeningAnimation();
     speechRef.current?.startRecognition();
+    
     setTimeout(() => {
       const spokenText = speechRef.current?.recognizedText || '';
       setRecognizedText(spokenText);
+      stopListeningAnimation();
     }, 3000); // Wait for speech processing
   };
 
@@ -37,10 +95,14 @@ function HomeScreen({ navigation }) {
     if (pois.length > 0) {
       const bestMatch = findBestMatch(spokenText, pois);
       if (bestMatch) {
-        bestMatch.description = bestMatch.description || ""; // Ensure description exists
+        bestMatch.description = bestMatch.description || "";
         console.log('Best Match:', bestMatch);
         setMatchedPOI(bestMatch);
-        navigation.navigate('MapScreen', { poi: bestMatch });
+
+        // Transition effect to MapScreen
+        setTimeout(() => {
+          navigation.navigate('MapScreen', { poi: bestMatch });
+        }, 1000);
       } else {
         console.log('No suitable POI found');
         Alert.alert('No POIs Found', 'Could not find a suitable POI.');
@@ -61,11 +123,11 @@ function HomeScreen({ navigation }) {
       let score = 0;
       
       if (lowerPOIName.includes(lowerSpoken) || lowerSpoken.includes(lowerPOIName)) {
-        score += 2; // Strong match for partial inclusion
+        score += 2;
       }
       
       if (lowerPOIName.startsWith(lowerSpoken) || lowerSpoken.startsWith(lowerPOIName)) {
-        score += 1; // Bonus for prefix matching
+        score += 1;
       }
 
       if (score > highestScore) {
@@ -75,22 +137,39 @@ function HomeScreen({ navigation }) {
     });
 
     console.log('Final selected POI:', bestMatch || null);
-    return bestMatch || null; // Return null if no match is found
+    return bestMatch || null;
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#1E1E2D', '#252542']} style={styles.container}>
       <SpeechToText ref={speechRef} />
 
-      <TouchableOpacity onPress={handlePress} style={styles.speakButton}>
-        <Text style={styles.buttonText}>Press to Speak</Text>
+      {/* Circular Button with Animation */}
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+        <Animated.View 
+          style={[
+            styles.speakButton,
+            { transform: [{ scale: scaleAnim }] }
+          ]}
+        >
+          <Animated.View 
+            style={[
+              styles.waveEffect,
+              {
+                opacity: waveAnim,
+                transform: [{ scale: waveAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] }) }]
+              }
+            ]}
+          />
+          <Text style={styles.buttonText}>{isListening ? 'Listening...' : 'Speak'}</Text>
+        </Animated.View>
       </TouchableOpacity>
 
       <Text style={styles.resultText}>Recognized: {recognizedText}</Text>
       {matchedPOI && (
         <Text style={styles.resultText}>Matched POI: {matchedPOI.name}</Text>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -101,22 +180,41 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#000',
   },
   speakButton: {
-    backgroundColor: '#555',
-    padding: 20,
-    borderRadius: 10,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FF6B6B', // Modern red-pink color
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 20,
+    position: 'relative',
+    zIndex: 2,
+    elevation: 5, // Shadow effect for Android
+    shadowColor: '#FF6B6B', // Shadow for iOS
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
+  waveEffect: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 107, 107, 0.4)',
+    zIndex: 1,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
+    zIndex: 3,
   },
   resultText: {
-    color: '#fff',
-    fontSize: 22,
+    color: '#FFF',
+    fontSize: 20,
     marginTop: 20,
+    textAlign: 'center',
   },
 });
