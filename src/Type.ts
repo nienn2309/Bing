@@ -11,6 +11,7 @@ export interface POI {
     name: string;
     pois_type: string;
     puid: string;
+    overwrite: string;
   }
   
   export interface LocationState {

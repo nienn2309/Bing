@@ -9,7 +9,7 @@ import { FloorplanOverlay } from './FloorplanOverlay';
 import { NavigationInstruction, NavigationGuide } from '../services/NavigationGuide';
 import TextToSpeechService from '../services/TextToSpeech';
 import Svg, { Ellipse } from 'react-native-svg';
-import BLEScanner from '../BLE';
+//import BLEScanner from '../BLE';
 
 const MapScreen = ({ route }) => {
   const { poi } = route.params || {}; // Get POI from navigation
@@ -46,7 +46,7 @@ const MapScreen = ({ route }) => {
       
       if (newSegment < routeCoordinates.length - 1) {
         const nextPoint = routeCoordinates[newSegment + 1];
-        const distanceToNext = NavigationGuide.calculateDistance({ location, destination: nextPoint });
+        const distanceToNext = NavigationGuide.calculatePointDistance(location, nextPoint);
         setDistance(distanceToNext);
       } else {
         setDistance(null);

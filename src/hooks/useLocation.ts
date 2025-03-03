@@ -7,7 +7,7 @@ import CompassHeading from 'react-native-compass-heading';
 export const useLocation = () => {
   const [location, setLocation] = useState<LocationState>({
     latitude: 21.043869,
-    longitude: 105.91725,
+    longitude: 105.91725, 
     latitudeDelta: 0.002,
     longitudeDelta: 0.002,
     heading: 0,
