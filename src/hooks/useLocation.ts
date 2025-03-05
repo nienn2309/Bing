@@ -8,8 +8,8 @@ export const useLocation = () => {
   const [location, setLocation] = useState<LocationState>({
     latitude: 21.043869,
     longitude: 105.91725, 
-    latitudeDelta: 0.002,
-    longitudeDelta: 0.002,
+    latitudeDelta: 0.001,
+    longitudeDelta: 0.001,
     heading: 0,
   });
 

@@ -1,0 +1,45 @@
+{
+    "building": {
+        "floors": [
+            {
+                "floor_number": "0",
+                "pois": [
+                    {
+                        "name": "toilet",
+                        "puid": "poi_dbefdcde-cef7-48a0-9d29-9f5914b167b9",
+                        "pois_type": "Toilets",
+                        "coordinates_lat": "21.03158930810761",
+                        "coordinates_lon": "105.7828385592995",
+                        "overwrite": "false",
+                        "is_building_entrance": "false",
+                        "description": "Public restroom", 
+                        "floor_name": "Ground Floor", 
+                        "floor_number": "0",  
+                        "image": "toilet.jpg",
+                        "is_door": "false",
+                        "is_published": "true"
+                    },
+                    {
+                        "name": "elevator",
+                        "puid": "poi_2043ca2a-08f1-4de7-8b99-911e70529a14",
+                        "pois_type": "Elevator",
+                        "coordinates_lat": "21.0314688092689",
+                        "coordinates_lon": "105.78292884307736",
+                        "overwrite": "false",
+                        "is_building_entrance": "false",
+                        "description": "Main elevator",
+                        "floor_name": "Ground Floor",
+                        "floor_number": "0",
+                        "image": "elevator.jpg",
+                        "is_door": "true",
+                        "is_published": "true"
+                    }
+                ]
+            }
+        ],
+        "buid": "building_7bf70569-257e-412d-a4be-9d1d85296a14_1731512504566",
+        "name": "80 duytan",
+        "coordinates_lat": "21.03150489607732",
+        "coordinates_lon": "105.78282143755749"
+    }
+}

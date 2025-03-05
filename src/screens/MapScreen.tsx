@@ -9,10 +9,11 @@ import { FloorplanOverlay } from './FloorplanOverlay';
 import { NavigationInstruction, NavigationGuide } from '../services/NavigationGuide';
 import TextToSpeechService from '../services/TextToSpeech';
 import Svg, { Ellipse } from 'react-native-svg';
-//import BLEScanner from '../BLE';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import OpenCamera from '../objDetection/OpenCamera';
 
-const MapScreen = ({ route }) => {
-  const { poi } = route.params || {}; // Get POI from navigation
+function MapScreen ({ route, navigation }) {
+  const { poi } = route.params || {};
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
   const location = useLocation();
@@ -23,7 +24,17 @@ const MapScreen = ({ route }) => {
   useEffect(() => {
     const tts = TextToSpeechService.getInstance();
     tts.initialize();
-    return () => tts.cleanup();
+
+    // Set timeout to navigate to camera after 5 seconds
+    const cameraTimeout = setTimeout(() => {
+      navigation.navigate('OpenCamera');
+    }, 5000);
+
+    // Cleanup function to clear timeout
+    return () => {
+      tts.cleanup();
+      clearTimeout(cameraTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -79,8 +90,8 @@ const MapScreen = ({ route }) => {
         initialRegion={{
           latitude: poi ? parseFloat(poi.coordinates_lat) : location.latitude,
           longitude: poi ? parseFloat(poi.coordinates_lon) : location.longitude,
-          latitudeDelta: 0.002,
-          longitudeDelta: 0.002,
+          latitudeDelta: 0.0015,
+          longitudeDelta: 0.0015,
         }}>
         
         <Marker
