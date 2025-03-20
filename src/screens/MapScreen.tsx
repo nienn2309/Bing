@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import {InteractionManager, View, Text } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { POI, RouteCoordinate } from '../Type';
 import { styles } from '../styles';
@@ -11,6 +11,7 @@ import TextToSpeechService from '../services/TextToSpeech';
 import Svg, { Ellipse } from 'react-native-svg';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import OpenCamera from '../objDetection/OpenCamera';
+
 
 function MapScreen ({ route, navigation }) {
   const { poi } = route.params || {};
@@ -26,15 +27,15 @@ function MapScreen ({ route, navigation }) {
     tts.initialize();
 
     // Set timeout to navigate to camera after 5 seconds
-    const cameraTimeout = setTimeout(() => {
-      navigation.navigate('OpenCamera');
-    }, 5000);
+    // const cameraTimeout = setTimeout(() => {
+    //   navigation.navigate('OpenCamera');
+    // }, 5000);
 
-    // Cleanup function to clear timeout
-    return () => {
-      tts.cleanup();
-      clearTimeout(cameraTimeout);
-    };
+    // // Cleanup function to clear timeout
+    // return () => {
+    //   tts.cleanup();
+    //   clearTimeout(cameraTimeout);
+    // };
   }, []);
 
   useEffect(() => {
@@ -45,24 +46,40 @@ function MapScreen ({ route, navigation }) {
     loadPOIs();
 
     if (location && routeCoordinates.length > 0) {
-      const newSegment = NavigationGuide.getUserProgress({ location, route: routeCoordinates });
-      setCurrentSegment(newSegment);
-      
-      const instruction = NavigationGuide.getNextInstruction({ location, route: routeCoordinates, currentSegment: newSegment });
-      setNavigationInstruction(instruction);
-      
-      if (instruction) {
-        TextToSpeechService.getInstance().speak(instruction.message);
-      }
-      
-      if (newSegment < routeCoordinates.length - 1) {
-        const nextPoint = routeCoordinates[newSegment + 1];
-        const distanceToNext = NavigationGuide.calculatePointDistance(location, nextPoint);
-        setDistance(distanceToNext);
-      } else {
-        setDistance(null);
-        setNavigationInstruction(null);
-      }
+      // Wrap UI updates in InteractionManager to ensure they run after animations
+      InteractionManager.runAfterInteractions(() => {
+        try {
+          const newSegment = NavigationGuide.getUserProgress({ location, route: routeCoordinates });
+          setCurrentSegment(newSegment);
+          
+          const instruction = NavigationGuide.getNextInstruction({ 
+            location, 
+            route: routeCoordinates, 
+            currentSegment: newSegment 
+          });
+          
+          // Batch state updates
+          requestAnimationFrame(() => {
+            setNavigationInstruction(instruction);
+            
+            if (instruction) {
+              TextToSpeechService.getInstance().speak(instruction.message);
+            }
+            
+            if (newSegment < routeCoordinates.length - 1) {
+              const nextPoint = routeCoordinates[newSegment + 1];
+              const distanceToNext = NavigationGuide.calculatePointDistance(location, nextPoint);
+              setDistance(distanceToNext);
+            } else {
+              setDistance(null);
+              setNavigationInstruction(null);
+            }
+          });
+  
+        } catch (error) {
+          console.error('Error updating navigation UI:', error);
+        }
+      });
     }
   }, [location, routeCoordinates]);
 

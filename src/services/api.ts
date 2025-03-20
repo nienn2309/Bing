@@ -14,7 +14,7 @@ export const fetchPOIs = async (): Promise<POI[]> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          buid: 'building_7bf70569-257e-412d-a4be-9d1d85296a14_1731512504566',
+          buid: 'building_e689dc06-afbf-47a7-a03c-11f6b799f56d_1742455222682',
           floor_number: '0',
         }),
       },
@@ -72,3 +72,4 @@ export const getFastestRoute = async (
     return [];
   }
 };
+
