@@ -14,7 +14,7 @@ export const fetchPOIs = async (): Promise<POI[]> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          buid: 'building_7bf70569-257e-412d-a4be-9d1d85296a14_1731512504566',
+          buid: 'building_925ec284-2dcb-4dd6-bd88-3a1c7c1c6b3c_1742481665477',
           floor_number: '0',
         }),
       },
@@ -69,8 +69,7 @@ export const getFastestRoute = async (
     }
     throw new Error('Invalid route data format');
   } catch (error) {
-    console.error('Error getting route:', error);
-    Alert.alert('Error', 'Failed to calculate route');
     return [];
   }
 };
+

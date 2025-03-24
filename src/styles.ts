@@ -95,4 +95,17 @@ export const styles = StyleSheet.create({
     marginTop: 5,
     fontStyle: 'italic',
   },
+
+  markerContainer: {
+    backgroundColor: 'white',
+    padding: 5,
+    borderRadius: 5,
+    borderColor: '#007AFF',
+    borderWidth: 1,
+  },
+  markerText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
 });

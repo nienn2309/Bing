@@ -1,92 +1,80 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text} from 'react-native';
-import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
-import {POI, RouteCoordinate} from '../Type';
-import {styles} from '../styles';
-import {useLocation} from '../hooks/useLocation';
-import {fetchPOIs, getFastestRoute} from '../services/api';
-import {FloorplanOverlay} from './FloorplanOverlay';
-import {NavigationInstruction, NavigationGuide} from '../services/NavigationGuide';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Alert } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { POI, RouteCoordinate } from '../Type';
+import { styles } from '../styles';
+import { useLocation } from '../hooks/useLocation';
+import { fetchPOIs, getFastestRoute } from '../services/api';
+import { FloorplanOverlay } from './FloorplanOverlay';
+import { NavigationInstruction, NavigationGuide } from '../services/NavigationGuide';
+import TextToSpeechService from '../services/TextToSpeech';
+import Svg, { Ellipse } from 'react-native-svg';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import OpenCamera from '../objDetection/OpenCamera';
 
-const MapScreen = () => {
+function MapScreen ({ route, navigation }) {
+  const { poi } = route.params || {};
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
-  const location = useLocation(); // Get real-time location and heading
+  const {location, isLocationUpdated} = useLocation();
   const [currentSegment, setCurrentSegment] = useState(0);
   const [navigationInstruction, setNavigationInstruction] = useState<NavigationInstruction | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
 
-  // Fetch POIs on mount
+  useEffect(() => {
+    const tts = TextToSpeechService.getInstance();
+    tts.initialize();
+
+    // Set timeout to navigate to camera after 5 seconds
+    // const cameraTimeout = setTimeout(() => {
+    //   navigation.navigate('OpenCamera');
+    // }, 5000);
+
+    // // Cleanup function to clear timeout
+    // return () => {
+    //   tts.cleanup();
+    //   clearTimeout(cameraTimeout);
+    // };
+  }, []);
+
   useEffect(() => {
     const loadPOIs = async () => {
       const poisData = await fetchPOIs();
-      console.log('Fetched POIs:', poisData);
       setPois(poisData);
     };
     loadPOIs();
   }, []);
 
-  // Calculate navigation instructions whenever the location or route changes
   useEffect(() => {
-    if (routeCoordinates.length > 0) {
-      // Calculate current segment based on user progress along the route
-      const newSegment = NavigationGuide.getUserProgress({
-        location: location,
-        route: routeCoordinates,
-      });
-      console.log('Calculated current segment:', newSegment);
+    if (isLocationUpdated && location && routeCoordinates.length > 0) {
+      const newSegment = NavigationGuide.getUserProgress({ location, route: routeCoordinates });
       setCurrentSegment(newSegment);
+      
+      const instruction = NavigationGuide.getNextInstruction({ location, route: routeCoordinates, currentSegment: newSegment });
+      
+      console.log("🛑 Navigation Instruction: ", instruction?.message); // Debugging log
   
-      // Get the next navigation instruction based on new segment
-      const instruction = NavigationGuide.getNextInstruction({
-        location: location,
-        route: routeCoordinates,
-        currentSegment: newSegment,
-      });
-      console.log('Navigation instruction:', instruction);
       setNavigationInstruction(instruction);
       
-      // Calculate and set distance to next point if applicable
-      if (newSegment < routeCoordinates.length - 1) {
-        const nextPoint = routeCoordinates[newSegment + 1];
-        const distanceToNext = NavigationGuide.calculateDistance({
-          location: location,
-          destination: nextPoint,
-        });
-        console.log('Distance to next point:', distanceToNext);
-        setDistance(distanceToNext);
+      if (instruction) {
+        TextToSpeechService.getInstance().speak(instruction.message);
       }
     }
-  }, [location, routeCoordinates]);
+  }, [location, routeCoordinates, isLocationUpdated]);
+  
 
-  // Reset navigation state when a new route is selected and fetch route
+  useEffect(() => {
+    if (isLocationUpdated && location && poi) {
+      handleGetRoute(poi);
+    }
+  }, [location, poi]); // Removed isLocationUpdated to prevent blocking updates  
+
   const handleGetRoute = async (poi: POI) => {
-    console.log(`Fetching route for POI: ${poi.name} (puid: ${poi.puid})`);
-    // Reset the navigation state so stale values don't carry over.
-    setCurrentSegment(0);
-    setNavigationInstruction(null);
-    setDistance(null);
-    setRouteCoordinates([]); // Clear previous route coordinates
-
     const route = await getFastestRoute(location, poi);
-    console.log('New route coordinates:', route);
     setRouteCoordinates(route);
+    TextToSpeechService.getInstance().speak(`Route to ${poi.name} calculated. Starting navigation.`, true);
   };
 
-  const NavigationInstructions: React.FC<{
-    instruction: NavigationInstruction | null;
-  }> = ({ instruction }) => {
-    if (!instruction) return null;
-  
-    return (
-      <View style={styles.instructionContainer}>
-        <Text style={styles.instructionText}>
-          {instruction.message}
-        </Text>
-      </View>
-    );
-  };
-  
   return (
     <View style={styles.container}>
       <MapView
@@ -97,23 +85,27 @@ const MapScreen = () => {
         userLocationAnnotationTitle="You are here"
         followsUserLocation={true}
         initialRegion={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: 0.002,
-          longitudeDelta: 0.002,
+          latitude: poi ? parseFloat(poi.coordinates_lat) : location.latitude,
+          longitude: poi ? parseFloat(poi.coordinates_lon) : location.longitude,
+          latitudeDelta: 0.0015,
+          longitudeDelta: 0.0015,
         }}>
         
-        {/* User location marker with real-time heading indicator */}
-        <Marker
-          coordinate={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          rotation={location.heading}
-          anchor={{x: 0.5, y: 0.5}}
-        >
-          <View style={styles.userHeadingMarker} /> {/* styles.ts */}
-        </Marker>
+        {isLocationUpdated && (
+          <Marker
+            coordinate={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }}
+            rotation={location.heading}
+            anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.userHeadingMarker}>
+              <Svg height={20} width={20}>
+                <Ellipse cx="10" cy="10" rx="10" ry="10" fill="blue" stroke="#fff" strokeWidth="2" />
+              </Svg>
+            </View>
+          </Marker>
+        )}
 
         {pois
           .filter(poi => poi.description !== 'Connector')
@@ -124,9 +116,18 @@ const MapScreen = () => {
                 latitude: parseFloat(poi.coordinates_lat),
                 longitude: parseFloat(poi.coordinates_lon),
               }}
-              onPress={() => handleGetRoute(poi)}
-              title={poi.name}
-            />
+              onPress={() => {
+                if (!isLocationUpdated) {
+                  Alert.alert("Location not available", "Retrying location fetch...");
+                  return;
+                }
+                handleGetRoute(poi);
+              }}
+            >
+              <View style={styles.markerContainer}>
+                <Text style={styles.markerText}>{poi.name}</Text>
+              </View>
+            </Marker>
           ))}
         
         {routeCoordinates.length > 0 && (
@@ -149,8 +150,11 @@ const MapScreen = () => {
       </MapView>
 
       {navigationInstruction && (
-        <NavigationInstructions instruction={navigationInstruction} />   
+        <View style={[styles.instructionContainer]}>
+          <Text style={styles.instructionText}>{navigationInstruction.message}</Text>
+        </View>   
       )}
+
       {distance !== null && (
         <View style={styles.distanceContainer}>
           <Text style={styles.distanceText}>
