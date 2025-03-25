@@ -21,19 +21,19 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  userHeadingMarker: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 20,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#2C7FDE',
-    transform: [{rotate: '0deg'}]
-  },
+  // userHeadingMarker: {
+  //   width: 0,
+  //   height: 0,
+  //   backgroundColor: 'transparent',
+  //   borderStyle: 'solid',
+  //   borderLeftWidth: 20,
+  //   borderRightWidth: 20,
+  //   borderBottomWidth: 20,
+  //   borderLeftColor: 'transparent',
+  //   borderRightColor: 'transparent',
+  //   borderBottomColor: '#2C7FDE',
+  //   transform: [{rotate: '0deg'}]
+  // },
   instructionContainer: {
     position: 'absolute',
     top: 50,

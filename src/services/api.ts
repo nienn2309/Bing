@@ -14,7 +14,7 @@ export const fetchPOIs = async (): Promise<POI[]> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          buid: 'building_e689dc06-afbf-47a7-a03c-11f6b799f56d_1742455222682',
+          buid: 'building_925ec284-2dcb-4dd6-bd88-3a1c7c1c6b3c_1742481665477',
           floor_number: '0',
         }),
       },

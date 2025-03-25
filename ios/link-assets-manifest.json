@@ -2,12 +2,8 @@
   "migIndex": 1,
   "data": [
     {
-      "path": "assets/labels.txt",
-      "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-    },
-    {
-      "path": "assets/model.tflite",
-      "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+      "path": "assets/model/model.tflite",
+      "sha1": "04476120328cd016411c523bbefe689214c812d1"
     }
   ]
 }

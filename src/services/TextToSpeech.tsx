@@ -55,19 +55,22 @@ class TextToSpeechService {
     if (!this.isInitialized) {
       await this.initialize();
     }
-
+  
     try {
-      // Only speak if the text is different from the last spoken text or if force is true
+      // ✅ Prevent looping by checking if the text is already spoken
       if (force || text !== this.lastSpokenText) {
+        console.log(`🗣 Speaking: ${text}`);
         await Tts.stop(); // Stop any ongoing speech
         await Tts.speak(text);
         this.lastSpokenText = text;
+      } else {
+        console.log(`🔄 Skipping duplicate speech: ${text}`);
       }
     } catch (error) {
       console.error('Error speaking text:', error);
       throw error;
     }
-  }
+  }  
 
   public async stop(): Promise<void> {
     try {
