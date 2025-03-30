@@ -29,9 +29,11 @@
     "react-native-screens": "^4.9.0",
     "react-native-sensors": "^7.3.6",
     "react-native-svg": "^15.11.1",
+    "react-native-swipe-gestures": "^1.0.5",
     "react-native-tflite": "^0.0.2",
     "react-native-tts": "^4.1.1",
-    "react-native-vision-camera": "^4.6.4"
+    "react-native-vision-camera": "^4.6.4",
+    "react-native-worklets-core": "^1.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

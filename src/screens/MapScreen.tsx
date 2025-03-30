@@ -8,21 +8,23 @@ import { fetchPOIs, getFastestRoute } from '../services/api';
 import { FloorplanOverlay } from './FloorplanOverlay';
 import { NavigationInstruction, NavigationGuide } from '../services/NavigationGuide';
 import TextToSpeechService from '../services/TextToSpeech';
-import Svg, { Ellipse } from 'react-native-svg';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import OpenCamera from '../objDetection/OpenCamera';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-function MapScreen ({ route, navigation }) {
-  const { poi } = route.params || {};
+function MapScreen() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { poi } = route?.params || {}; // ✅ Handle undefined params
+
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
   const { location, isLocationUpdated, setLocation, setIsLocationUpdated } = useLocation();
   const [currentSegment, setCurrentSegment] = useState(0);
   const [navigationInstruction, setNavigationInstruction] = useState<NavigationInstruction | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
-  const mapRef = useRef(null); 
+  const mapRef = useRef(null);
   const lastInstructionRef = useRef<string>('');
 
+  // ✅ Auto-center map on location update
   useEffect(() => {
     if (isLocationUpdated && location && mapRef.current) {
       console.log("📍 Auto-centering to:", location);
@@ -33,24 +35,15 @@ function MapScreen ({ route, navigation }) {
         longitudeDelta: 0.0015,
       });
     }
-  }, [location, isLocationUpdated]); // ✅ Triggers whenever location updates
+  }, [location, isLocationUpdated]);
 
+  // ✅ Initialize Text-to-Speech
   useEffect(() => {
     const tts = TextToSpeechService.getInstance();
     tts.initialize();
-
-    // Set timeout to navigate to camera after 5 seconds
-    // const cameraTimeout = setTimeout(() => {
-    //   navigation.navigate('OpenCamera');
-    // }, 5000);
-
-    // // Cleanup function to clear timeout
-    // return () => {
-    //   tts.cleanup();
-    //   clearTimeout(cameraTimeout);
-    // };
   }, []);
 
+  // ✅ Fetch POIs once
   useEffect(() => {
     const loadPOIs = async () => {
       const poisData = await fetchPOIs();
@@ -59,39 +52,49 @@ function MapScreen ({ route, navigation }) {
     loadPOIs();
   }, []);
 
+  // ✅ Update navigation instructions based on progress
   useEffect(() => {
     if (isLocationUpdated && location && routeCoordinates.length > 0) {
       console.log("Using Built-in Location for Navigation:", location);
-  
+
       const newSegment = NavigationGuide.getUserProgress({
-        location,  
+        location,
         route: routeCoordinates
       });
-  
+
       setCurrentSegment(newSegment);
-  
+
       const instruction = NavigationGuide.getNextInstruction({
-        location, 
+        location,
         route: routeCoordinates,
         currentSegment: newSegment
       });
-  
+
       if (instruction && instruction.message !== lastInstructionRef.current) {
         TextToSpeechService.getInstance().speak(instruction.message);
-        lastInstructionRef.current = instruction.message; // ✅ Store last spoken message
+        lastInstructionRef.current = instruction.message;
       }
-      
+
       setNavigationInstruction(instruction);
     }
-  }, [location, routeCoordinates, isLocationUpdated]);   
+  }, [location, routeCoordinates, isLocationUpdated]);
 
+  // ✅ Prevent infinite loops when fetching routes
   useEffect(() => {
-    if (isLocationUpdated && location && poi) {
-      handleGetRoute(poi);
+    if (!poi || !isLocationUpdated || !location) return;
+    if (routeCoordinates.length > 0) {
+      console.log("✅ Route already exists, skipping re-fetch.");
+      return; // 🚀 Prevents re-fetching the same route
     }
-  }, [location, poi]); // Removed isLocationUpdated to prevent blocking updates  
+    handleGetRoute(poi);
+  }, [poi]); // ✅ Now only runs when `poi` changes
 
   const handleGetRoute = async (poi: POI) => {
+    if (!location) {
+      console.log("⚠️ Cannot fetch route: Location is undefined.");
+      return;
+    }
+    console.log("🚀 Fetching route to:", poi.name);
     const route = await getFastestRoute(location, poi);
     setRouteCoordinates(route);
     TextToSpeechService.getInstance().speak(`Route to ${poi.name} calculated. Starting navigation.`, true);
@@ -101,7 +104,7 @@ function MapScreen ({ route, navigation }) {
     <View style={styles.container}>
       <MapView
         style={styles.map}
-        ref={mapRef} // ✅ Assign the reference to the MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         showsUserLocation={true}
         followsUserLocation={true}
@@ -124,24 +127,6 @@ function MapScreen ({ route, navigation }) {
           }
         }}
       >
-        
-        {/* {isLocationUpdated && (
-          <Marker
-            coordinate={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            rotation={location.heading}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={styles.userHeadingMarker}>
-              <Svg height={20} width={20}>
-                <Ellipse cx="10" cy="10" rx="10" ry="10" fill="red" stroke="#fff" strokeWidth="2" />
-              </Svg>
-            </View>
-          </Marker>
-        )} */}
-
         {pois
           .filter(poi => poi.description !== 'Connector')
           .map((poi, index) => (
@@ -165,7 +150,7 @@ function MapScreen ({ route, navigation }) {
             </Marker>
           ))
         }
-        
+
         {routeCoordinates.length > 0 && (
           <Polyline
             coordinates={routeCoordinates}
@@ -177,8 +162,8 @@ function MapScreen ({ route, navigation }) {
 
         <FloorplanOverlay 
           currentRegion={{
-            latitude: location.latitude,
-            longitude: location.longitude,
+            latitude: location?.latitude || 0,
+            longitude: location?.longitude || 0,
             latitudeDelta: 0.002,
             longitudeDelta: 0.002,
           }} 
@@ -186,7 +171,7 @@ function MapScreen ({ route, navigation }) {
       </MapView>
 
       {navigationInstruction && (
-        <View style={[styles.instructionContainer]}>
+        <View style={styles.instructionContainer}>
           <Text style={styles.instructionText}>{navigationInstruction.message}</Text>
         </View>   
       )}

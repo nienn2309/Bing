@@ -1,9 +1,0 @@
-{
-  "migIndex": 1,
-  "data": [
-    {
-      "path": "assets/model/model.tflite",
-      "sha1": "04476120328cd016411c523bbefe689214c812d1"
-    }
-  ]
-}
