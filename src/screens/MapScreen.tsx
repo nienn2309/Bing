@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Camera } from 'react-native-maps';
 import { POI, RouteCoordinate } from '../Type';
 import { styles } from '../styles';
 import { useLocation } from '../hooks/useLocation';
@@ -24,16 +24,22 @@ function MapScreen() {
   const mapRef = useRef(null);
   const lastInstructionRef = useRef<string>('');
 
-  // ✅ Auto-center map on location update
+  // ✅ Auto-center map on location update with camera settings to maintain tilt
   useEffect(() => {
     if (isLocationUpdated && location && mapRef.current) {
       console.log("📍 Auto-centering to:", location);
-      mapRef.current.animateToRegion({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.0015,
-        longitudeDelta: 0.0015,
-      });
+      
+      // Use animateCamera instead of animateToRegion to maintain tilt perspective
+      mapRef.current.animateCamera({
+        center: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        },
+        pitch: 35, // Set a consistent tilted view of 40 degrees (between 30-45)
+        heading: location.heading || 0,
+        zoom: 20,
+        altitude: 300, // Adding altitude for better perspective
+      }, { duration: 500 });
     }
   }, [location, isLocationUpdated]);
 
@@ -100,6 +106,18 @@ function MapScreen() {
     TextToSpeechService.getInstance().speak(`Route to ${poi.name} calculated. Starting navigation.`, true);
   };
 
+  // Initial camera setup with tilted perspective
+  const initialCamera: Camera = {
+    center: {
+      latitude: location?.latitude || 0,
+      longitude: location?.longitude || 0,
+    },
+    pitch: 35, // Setting a 40-degree tilt (between 30-45 degrees)
+    heading: location?.heading || 0,
+    zoom: 20,
+    altitude: 300, // Adding altitude for better perspective
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -107,9 +125,12 @@ function MapScreen() {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         showsUserLocation={true}
-        followsUserLocation={true}
+        followsUserLocation={false} // Changed to false to prevent auto-resets to top-down view
         showsCompass={true}
         userLocationAnnotationTitle="You are here"
+        pitchEnabled={true} // Enable pitch control
+        rotateEnabled={true} // Enable rotation
+        camera={initialCamera} // Use camera prop instead of region for 3D perspective
         onUserLocationChange={(event) => {
           const coordinate = event.nativeEvent.coordinate;
           if (coordinate) {

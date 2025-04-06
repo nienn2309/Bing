@@ -30,7 +30,7 @@ export default function ObjectDetection() {
   }, [hasPermission]);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://192.168.88.154:8000/detect-websocket');
+    ws.current = new WebSocket('ws://192.168.55.121:8000/detect-websocket');
 
     ws.current.onopen = () => console.log('WebSocket connected');
     ws.current.onmessage = (e) => {

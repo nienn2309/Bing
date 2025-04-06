@@ -41,34 +41,31 @@ function HomeScreen({ navigation }) {
 
   const startListeningAnimation = () => {
     setIsListening(true);
-
-    // Scale effect when pressing
     Animated.sequence([
       Animated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 100,
+        toValue: 0.95,
+        duration: 150,
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 100,
+        duration: 150,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Soundwave effect loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(waveAnim, {
           toValue: 1,
-          duration: 500,
-          easing: Easing.ease,
+          duration: 600,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(waveAnim, {
           toValue: 0,
-          duration: 500,
-          easing: Easing.ease,
+          duration: 600,
+          easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
       ])
@@ -88,7 +85,7 @@ function HomeScreen({ navigation }) {
       const spokenText = speechRef.current?.recognizedText || '';
       setRecognizedText(spokenText);
       stopListeningAnimation();
-    }, 3000); // Wait for speech processing
+    }, 3000);
   };
 
   const handlePOIMatch = (spokenText) => {
@@ -98,8 +95,6 @@ function HomeScreen({ navigation }) {
         bestMatch.description = bestMatch.description || "";
         console.log('Best Match:', bestMatch);
         setMatchedPOI(bestMatch);
-
-        // Transition effect to MapScreen
         setTimeout(() => {
           navigation.navigate('MapScreen', { poi: bestMatch });
         }, 1000);
@@ -141,11 +136,17 @@ function HomeScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={['#1E1E2D', '#252542']} style={styles.container}>
+    <LinearGradient 
+      colors={['#1A1A2E', '#16213E', '#0F3460']} // Modern gradient with depth
+      style={styles.container}
+    >
       <SpeechToText ref={speechRef} />
 
-      {/* Circular Button with Animation */}
-      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+      {/* Header Text */}
+      <Text style={styles.headerText}>Explore with Your Voice</Text>
+
+      {/* Glassmorphism Button */}
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
         <Animated.View 
           style={[
             styles.speakButton,
@@ -157,18 +158,25 @@ function HomeScreen({ navigation }) {
               styles.waveEffect,
               {
                 opacity: waveAnim,
-                transform: [{ scale: waveAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] }) }]
+                transform: [{ scale: waveAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] }) }]
               }
             ]}
           />
-          <Text style={styles.buttonText}>{isListening ? 'Listening...' : 'Speak'}</Text>
+          <Text style={styles.buttonText}>
+            {isListening ? 'Listening...' : 'Tap to Speak'}
+          </Text>
         </Animated.View>
       </TouchableOpacity>
 
-      <Text style={styles.resultText}>Recognized: {recognizedText}</Text>
-      {matchedPOI && (
-        <Text style={styles.resultText}>Matched POI: {matchedPOI.name}</Text>
-      )}
+      {/* Result Display */}
+      <View style={styles.resultContainer}>
+        <Text style={styles.resultText}>
+          {recognizedText ? `Heard: "${recognizedText}"` : 'Say something...'}
+        </Text>
+        {matchedPOI && (
+          <Text style={styles.matchedText}>Found: {matchedPOI.name}</Text>
+        )}
+      </View>
     </LinearGradient>
   );
 }
@@ -179,42 +187,70 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 50,
+  },
+  headerText: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginTop: 40,
+    fontFamily: 'System', // Use a modern sans-serif font if available
   },
   speakButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#FF6B6B', // Modern red-pink color
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Glassmorphism effect
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
     position: 'relative',
     zIndex: 2,
-    elevation: 5, // Shadow effect for Android
-    shadowColor: '#FF6B6B', // Shadow for iOS
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    backdropFilter: 'blur(10px)', // Note: Not natively supported, simulated with transparency
   },
   waveEffect: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 107, 107, 0.4)',
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: 'rgba(88, 101, 242, 0.3)', // Subtle blue wave
     zIndex: 1,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
     zIndex: 3,
+    textAlign: 'center',
+  },
+  resultContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 15,
+    padding: 20,
+    width: '90%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   resultText: {
-    color: '#FFF',
-    fontSize: 20,
-    marginTop: 20,
+    color: '#E0E0E0',
+    fontSize: 18,
     textAlign: 'center',
+    fontWeight: '400',
+  },
+  matchedText: {
+    color: '#58D68D', // Modern green for success
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
   },
 });
