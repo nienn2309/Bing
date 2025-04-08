@@ -37,39 +37,81 @@ export const styles = StyleSheet.create({
   instructionContainer: {
     position: 'absolute',
     top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
+    left: 15,
+    right: 15,
+    backgroundColor: '#89CFF0', // Baby blue
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.5,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    flexDirection: 'row', // Align arrow and text horizontally
+    alignItems: 'center', // Center vertically
+    justifyContent: 'space-between', // Space out arrow and text
   },
   instructionText: {
     fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '600',
+    textAlign: 'left', // Changed from center to align with arrow
+    color: '#1A3C5A',
+    letterSpacing: 0.5,
+    flex: 1, // Allow text to take remaining space
+    marginRight: 10, // Space between text and arrow
   },
-  distanceContainer: {
-    // styles for distance container
+  directionArrow: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningOverlay: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    padding: 10,
-    borderRadius: 5,
+    top: '40%',
+    left: '10%',
+    right: '10%',
+    backgroundColor: 'rgba(255, 0, 0, 0.9)',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  warningText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },  
+  distanceContainer: {
+    position: 'absolute',
+    bottom: 15, // Moved closer to bottom edge
+    left: 15, // Moved closer to left edge
+    right: 15, // Ensures it stretches but stays edged
+    backgroundColor: '#89CFF0', // Baby blue background
+    padding: 12,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 6, // Slightly less than instruction for hierarchy
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)', // Subtle white border
+    // Adding a slight gradient effect (optional)
+    // background: 'linear-gradient(135deg, #89CFF0, #A1D6E2)',
   },
   distanceText: {
-    // styles for distance text
     fontSize: 16,
-    color: '#000',
+    color: '#1A3C5A', // Darker blue-gray for contrast
+    fontWeight: '500', // Medium bold for clarity
+    textAlign: 'center',
+    letterSpacing: 0.3, // Slight spacing for modern feel
   },
   headingIndicator: {
     position: 'absolute',

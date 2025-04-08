@@ -11,36 +11,39 @@ const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
+    <NavigationContainer> 
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Home" component={HomeScreen} /> 
-        <Stack.Screen name="MapScreen" component={MapWithSwipe} />
-        <Stack.Screen name="ObjectDetection" component={ObjectDetectionWithSwipe} />
+        {/* <Stack.Screen name="Home" component={HomeScreen} /> */}
+        <Stack.Screen name="MapScreen" component={MapScreen} />
+        <Stack.Screen 
+          name="ObjectDetection" 
+          component={(props) => <ObjectDetection {...props} onObstacleChange={() => {}} />} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
-function MapWithSwipe({ navigation, route }) {
-  const routeParams = useRoute()?.params || {}; // ✅ Fix: Ensures params are safely accessed
+// function MapWithSwipe({ navigation, route }) {
+//   const routeParams = useRoute()?.params || {}; // ✅ Fix: Ensures params are safely accessed
 
-  return (
-    <GestureRecognizer
-      onSwipeLeft={() => navigation.navigate('ObjectDetection')}
-      style={{ flex: 1 }}
-    >
-      <MapScreen navigation={navigation} route={{ params: routeParams }} />
-    </GestureRecognizer>
-  );
-}
+//   return (
+//     <GestureRecognizer
+//       onSwipeLeft={() => navigation.navigate('ObjectDetection')}
+//       style={{ flex: 1 }}
+//     >
+//       <MapScreen navigation={navigation} route={{ params: routeParams }} />
+//     </GestureRecognizer>
+//   );
+// }
 
-function ObjectDetectionWithSwipe({ navigation }) {
-  return (
-    <GestureRecognizer
-      onSwipeLeft={() => navigation.navigate('MapScreen')}
-      style={{ flex: 1 }}
-    >
-      <ObjectDetection navigation={navigation} />
-    </GestureRecognizer>
-  );
-}
+// function ObjectDetectionWithSwipe({ navigation }) {
+//   return (
+//     <GestureRecognizer
+//       onSwipeLeft={() => navigation.navigate('MapScreen')}
+//       style={{ flex: 1 }}
+//     >
+//       <ObjectDetection navigation={navigation} />
+//     </GestureRecognizer>
+//   );
+// }

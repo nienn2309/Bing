@@ -3,18 +3,20 @@ import { View, Text, Alert } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Camera } from 'react-native-maps';
 import { POI, RouteCoordinate } from '../Type';
 import { styles } from '../styles';
+import Svg, { Polygon } from 'react-native-svg';
 import { useLocation } from '../hooks/useLocation';
 import { fetchPOIs, getFastestRoute } from '../services/api';
 import { FloorplanOverlay } from './FloorplanOverlay';
 import { NavigationInstruction, NavigationGuide } from '../services/NavigationGuide';
 import TextToSpeechService from '../services/TextToSpeech';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import ObjectDetection from '../objDetection/OpenCamera';
 
 function MapScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { poi } = route?.params || {}; // ✅ Handle undefined params
-
+  const { poi } = route?.params || {};
+  const [obstacleDetected, setObstacleDetected] = useState(false);
   const [pois, setPois] = useState<POI[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState<RouteCoordinate[]>([]);
   const { location, isLocationUpdated, setLocation, setIsLocationUpdated } = useLocation();
@@ -24,32 +26,29 @@ function MapScreen() {
   const mapRef = useRef(null);
   const lastInstructionRef = useRef<string>('');
 
-  // ✅ Auto-center map on location update with camera settings to maintain tilt
+  // Auto-center camera when location updates
   useEffect(() => {
     if (isLocationUpdated && location && mapRef.current) {
-      console.log("📍 Auto-centering to:", location);
-      
-      // Use animateCamera instead of animateToRegion to maintain tilt perspective
       mapRef.current.animateCamera({
         center: {
           latitude: location.latitude,
           longitude: location.longitude,
         },
-        pitch: 35, // Set a consistent tilted view of 40 degrees (between 30-45)
-        heading: location.heading || 0,
-        zoom: 20,
-        altitude: 300, // Adding altitude for better perspective
+        pitch: 60,
+        heading: location.heading || 30,
+        zoom: 50,
+        altitude: 300,
       }, { duration: 500 });
     }
   }, [location, isLocationUpdated]);
 
-  // ✅ Initialize Text-to-Speech
+  // Init TTS
   useEffect(() => {
     const tts = TextToSpeechService.getInstance();
     tts.initialize();
   }, []);
 
-  // ✅ Fetch POIs once
+  // Load POIs
   useEffect(() => {
     const loadPOIs = async () => {
       const poisData = await fetchPOIs();
@@ -58,11 +57,9 @@ function MapScreen() {
     loadPOIs();
   }, []);
 
-  // ✅ Update navigation instructions based on progress
+  // Navigation instruction updates
   useEffect(() => {
     if (isLocationUpdated && location && routeCoordinates.length > 0) {
-      console.log("Using Built-in Location for Navigation:", location);
-
       const newSegment = NavigationGuide.getUserProgress({
         location,
         route: routeCoordinates
@@ -81,41 +78,85 @@ function MapScreen() {
         lastInstructionRef.current = instruction.message;
       }
 
+      setDistance(instruction.distance);
       setNavigationInstruction(instruction);
     }
   }, [location, routeCoordinates, isLocationUpdated]);
 
-  // ✅ Prevent infinite loops when fetching routes
+  // Get route once when POI changes
   useEffect(() => {
     if (!poi || !isLocationUpdated || !location) return;
-    if (routeCoordinates.length > 0) {
-      console.log("✅ Route already exists, skipping re-fetch.");
-      return; // 🚀 Prevents re-fetching the same route
-    }
+    if (routeCoordinates.length > 0) return;
+
     handleGetRoute(poi);
-  }, [poi]); // ✅ Now only runs when `poi` changes
+  }, [poi]);
+
+  // Simulate user movement along route
+  useEffect(() => {
+    if (routeCoordinates.length === 0) return;
+
+    console.log("🧭 Starting simulated navigation...");
+    let index = 0;
+
+    const intervalId = setInterval(() => {
+      if (index >= routeCoordinates.length) {
+        clearInterval(intervalId);
+        console.log("✅ Finished simulating navigation.");
+        return;
+      }
+
+      const nextCoord = routeCoordinates[index];
+      setLocation({
+        latitude: nextCoord.latitude,
+        longitude: nextCoord.longitude,
+        heading: 0,
+        latitudeDelta: 0.001,
+        longitudeDelta: 0.001,
+      });
+      setIsLocationUpdated(true);
+
+      console.log("📍 Simulated location set to:", nextCoord);
+      index++;
+    }, 4000); // Move every 1 second
+
+    return () => clearInterval(intervalId);
+  }, [routeCoordinates]);
 
   const handleGetRoute = async (poi: POI) => {
-    if (!location) {
-      console.log("⚠️ Cannot fetch route: Location is undefined.");
-      return;
-    }
-    console.log("🚀 Fetching route to:", poi.name);
+    if (!location) return;
     const route = await getFastestRoute(location, poi);
     setRouteCoordinates(route);
     TextToSpeechService.getInstance().speak(`Route to ${poi.name} calculated. Starting navigation.`, true);
   };
 
-  // Initial camera setup with tilted perspective
+  // Function to determine arrow rotation based on instruction
+  const getArrowRotation = (instruction: NavigationInstruction, userHeading: number) => {
+    if (!instruction || !instruction.requiredBearing) return 0;
+
+    const headingDiff = NavigationGuide.getHeadingDifference(userHeading, instruction.requiredBearing);
+    const turnDirection = NavigationGuide.getTurnDirection(headingDiff); // Reuse logic from NavigationGuide
+
+    switch (turnDirection) {
+      case 'straight':
+        return 0; // Arrow points straight
+      case 'right':
+        return 90; // Arrow points right
+      case 'left':
+        return -90; // Arrow points left
+      default:
+        return 0; // Fallback to straight
+    }
+  };
+
   const initialCamera: Camera = {
     center: {
       latitude: location?.latitude || 0,
       longitude: location?.longitude || 0,
     },
-    pitch: 35, // Setting a 40-degree tilt (between 30-45 degrees)
-    heading: location?.heading || 0,
-    zoom: 20,
-    altitude: 300, // Adding altitude for better perspective
+    pitch: 50,
+    heading: location?.heading || 30,
+    zoom: 50,
+    altitude: 300,
   };
 
   return (
@@ -125,29 +166,40 @@ function MapScreen() {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         showsUserLocation={true}
-        followsUserLocation={false} // Changed to false to prevent auto-resets to top-down view
-        showsCompass={true}
+        followsUserLocation={false}
+        showsCompass={true} 
         userLocationAnnotationTitle="You are here"
-        pitchEnabled={true} // Enable pitch control
-        rotateEnabled={true} // Enable rotation
-        camera={initialCamera} // Use camera prop instead of region for 3D perspective
+        pitchEnabled={true}
+        rotateEnabled={true}
+        camera={initialCamera}
         onUserLocationChange={(event) => {
-          const coordinate = event.nativeEvent.coordinate;
-          if (coordinate) {
-            const { latitude, longitude, heading } = coordinate;
-            console.log("📍 Built-in location updated:", latitude, longitude, heading);
-
-            setLocation({
-              latitude,
-              longitude,
-              latitudeDelta: 0.001,
-              longitudeDelta: 0.001,
-              heading: heading || 0,
-            });
-            setIsLocationUpdated(true);
-          }
+           // Disabled to avoid override during simulation
+             const coordinate = event.nativeEvent.coordinate;
+              if (coordinate) {
+               const { latitude, longitude, heading } = coordinate;
+               setLocation({
+                 latitude,
+                 longitude,
+                 latitudeDelta: 0.001,
+                 longitudeDelta: 0.001,
+                 heading: heading || 0,
+               });
+               setIsLocationUpdated(true);
+             }
         }}
       >
+
+        {location && (
+          <Marker
+            coordinate={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }}
+            title="Simulated Location"
+            pinColor="blue"
+          />
+        )} 
+
         {pois
           .filter(poi => poi.description !== 'Connector')
           .map((poi, index) => (
@@ -181,20 +233,34 @@ function MapScreen() {
           />
         )}
 
-        <FloorplanOverlay 
+        <FloorplanOverlay
           currentRegion={{
             latitude: location?.latitude || 0,
             longitude: location?.longitude || 0,
             latitudeDelta: 0.002,
             longitudeDelta: 0.002,
-          }} 
+          }}
         />
       </MapView>
 
       {navigationInstruction && (
         <View style={styles.instructionContainer}>
           <Text style={styles.instructionText}>{navigationInstruction.message}</Text>
-        </View>   
+          {navigationInstruction.requiredBearing !== undefined && (
+            <View style={styles.directionArrow}>
+              <Svg height="30" width="30">
+                <Polygon
+                  points="15,5 25,25 15,20 5,25" // Upward arrow
+                  fill="#1A3C5A"
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                  rotation={getArrowRotation(navigationInstruction, location.heading)} // Relative rotation
+                  origin="15,15" // Center of rotation
+                />
+              </Svg>
+            </View>
+          )}
+        </View>
       )}
 
       {distance !== null && (
@@ -204,8 +270,15 @@ function MapScreen() {
           </Text>
         </View>
       )}
+      {obstacleDetected && (
+        <View style={styles.warningOverlay}>
+          <Text style={styles.warningText}>Please stop for now...</Text>
+        </View>
+      )}
+
+      <ObjectDetection onObstacleChange={setObstacleDetected}/>
     </View>
   );
-};
+}
 
 export default MapScreen;

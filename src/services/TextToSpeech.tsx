@@ -72,13 +72,8 @@ class TextToSpeechService {
     }
   }  
 
-  public async stop(): Promise<void> {
-    try {
-      await Tts.stop();
-    } catch (error) {
-      console.error('Error stopping speech:', error);
-      throw error;
-    }
+  public stop(): void {
+    Tts.stop();
   }
 
   public cleanup(): void {

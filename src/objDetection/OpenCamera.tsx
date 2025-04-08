@@ -1,19 +1,18 @@
+// src/components/ObjectDetectionView.tsx
+
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
-import { Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import TextToSpeechService from '../services/TextToSpeech';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function ObjectDetection() {
+export default function ObjectDetection({ onObstacleChange }) {
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission } = useCameraPermission();
   const cameraRef = useRef(null);
   const ws = useRef(null);
   const [detections, setDetections] = useState([]);
-  const navigation = useNavigation();
   const tts = TextToSpeechService.getInstance();
   const [obstacleDetected, setObstacleDetected] = useState(false);
   const obstacleTimeout = useRef(null);
@@ -30,7 +29,7 @@ export default function ObjectDetection() {
   }, [hasPermission]);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://192.168.55.121:8000/detect-websocket');
+    ws.current = new WebSocket('ws://192.168.55.111:8000/detect-websocket');
 
     ws.current.onopen = () => console.log('WebSocket connected');
     ws.current.onmessage = (e) => {
@@ -89,6 +88,8 @@ export default function ObjectDetection() {
     if (obstacleInCenter) {
       if (!obstacleDetected) {
         setObstacleDetected(true);
+        onObstacleChange?.(true);
+        tts.stop();
         tts.speak('Obstacle detected on the road. Please wait');
         if (obstacleTimeout.current) {
           clearTimeout(obstacleTimeout.current);
@@ -99,16 +100,18 @@ export default function ObjectDetection() {
       if (obstacleDetected && !obstacleTimeout.current) {
         obstacleTimeout.current = setTimeout(() => {
           setObstacleDetected(false);
-          tts.speak('You can continue now', true);
+          onObstacleChange?.(false);
+          tts.stop();
+          tts.speak('You can continue to go now', true);
         }, 5000);
       }
     }
   }, [detections]);
 
-  if (!hasPermission || !device) return <Text>Loading camera...</Text>;
+  if (!hasPermission || !device) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={styles.cameraWrapper}>
       <Camera ref={cameraRef} style={StyleSheet.absoluteFill} device={device} isActive={true} photo={true} />
       {detections.map((d, i) => {
         const [x1, y1, x2, y2] = d.bounding_box;
@@ -139,3 +142,18 @@ export default function ObjectDetection() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  cameraWrapper: {
+    position: 'absolute',
+    bottom: 70,
+    right: 20,
+    width: 160,
+    height: 120,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'white',
+    zIndex: 10,
+  },
+});

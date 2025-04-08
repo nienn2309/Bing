@@ -194,13 +194,13 @@ export class NavigationGuide {
     return { latitude: yy, longitude: xx };
   }
 
-  private static getHeadingDifference(userHeading: number, requiredBearing: number): number {
+  public static getHeadingDifference(userHeading: number, requiredBearing: number): number {
     let diff = (requiredBearing - userHeading + 360) % 360;
     if (diff > 180) diff -= 360;
     return diff;
   }
 
-  private static getTurnDirection(headingDiff: number): string {
+  public static getTurnDirection(headingDiff: number): string {
     if (Math.abs(headingDiff) <= this.HEADING_TOLERANCE) {
       return "straight ahead";
     }

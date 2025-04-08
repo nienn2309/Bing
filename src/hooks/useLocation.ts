@@ -68,13 +68,7 @@ export const useLocation = () => {
   }, []);
 
   return { 
-    location: location ?? { 
-      latitude: 0, 
-      longitude: 0, 
-      latitudeDelta: 0.001, 
-      longitudeDelta: 0.001, 
-      heading: 0 
-    }, 
+    location, 
     isLocationUpdated, 
     errorMessage,
     setLocation,  // ✅ Now exposing the function
